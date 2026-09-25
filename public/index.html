@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciador de Presença de Alunos</title>
+  <meta name="description" content="Sistema completo de gestão e registro de presença escolar com relatórios, auditoria e controle de acesso.">
+  
+  <!-- Fontes Google: Space Grotesk e DM Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+
+  <!-- Toast de Notificações -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO) -->
+  <div id="auth-screen" class="auth-wrapper hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Presença Escolar</h1>
+          <p class="brand-subtitle">Gerenciador de Presença de Alunos</p>
+        </div>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Entrar</button>
+        <button type="button" id="tab-register" class="tab-btn" onclick="switchAuthTab('register')">Cadastrar Responsável</button>
+      </div>
+
+      <!-- FORMULÁRIO DE LOGIN -->
+      <form id="form-login" class="auth-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-username">Nome de Usuário</label>
+          <input type="text" id="login-username" required placeholder="ex: admin" autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required placeholder="Digite sua senha" autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" id="btn-submit-login">
+          <span>Acessar o Painel</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+
+        <div class="auth-credentials-hint">
+          <p><strong>Acesso inicial padrão:</strong></p>
+          <p>Usuário: <code id="hint-user">admin</code> | Senha: <code id="hint-pass">Admin123!</code></p>
+        </div>
+      </form>
+
+      <!-- FORMULÁRIO DE CADASTRO -->
+      <form id="form-register" class="auth-form hidden" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label for="reg-name">Nome Completo</label>
+          <input type="text" id="reg-name" required placeholder="ex: Professora Maria Silva" autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label for="reg-username">Nome de Usuário</label>
+          <input type="text" id="reg-username" required minlength="3" placeholder="ex: mariasilva" autocomplete="username">
+          <small class="field-help">Mínimo de 3 caracteres (letras e números)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-password">Senha</label>
+          <input type="password" id="reg-password" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          <small class="field-help">A senha deve ter no mínimo 6 caracteres</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" id="btn-submit-register">
+          <span>Criar Conta de Acesso</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- APLICAÇÃO PRINCIPAL (PROTEGIDA POR LOGIN) -->
+  <div id="app-layout" class="app-container hidden">
+    
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside id="app-sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <h2>Presença</h2>
+            <span>Gestão Acadêmica</span>
+          </div>
+        </div>
+        <button type="button" class="btn-icon mobile-only" onclick="toggleSidebar(false)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">PRINCIPAL</div>
+        <a href="#dashboard" class="nav-item active" data-section="dashboard" onclick="navigate('dashboard')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#attendance" class="nav-item" data-section="attendance" onclick="navigate('attendance')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>Fazer Chamada</span>
+        </a>
+        <a href="#students" class="nav-item" data-section="students" onclick="navigate('students')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Alunos</span>
+        </a>
+        <a href="#courses" class="nav-item" data-section="courses" onclick="navigate('courses')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Cursos</span>
+        </a>
+        <a href="#history" class="nav-item" data-section="history" onclick="navigate('history')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Histórico</span>
+        </a>
+        <a href="#reports" class="nav-item" data-section="reports" onclick="navigate('reports')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Relatórios</span>
+        </a>
+
+        <!-- MENUS EXCLUSIVOS PARA ADMINISTRADOR -->
+        <div id="admin-nav-group" class="admin-only hidden">
+          <div class="nav-section-title">ADMINISTRAÇÃO</div>
+          <a href="#users" class="nav-item" data-section="users" onclick="navigate('users')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            <span>Usuários</span>
+          </a>
+          <a href="#audit" class="nav-item" data-section="audit" onclick="navigate('audit')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Auditoria</span>
+          </a>
+        </div>
+
+        <div class="nav-section-title">CONTA</div>
+        <a href="#profile" class="nav-item" data-section="profile" onclick="navigate('profile')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Meu Perfil</span>
+        </a>
+      </nav>
+
+      <!-- RODAPÉ DO USUÁRIO LOGADO NA SIDEBAR -->
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">U</div>
+        <div class="user-info">
+          <span class="user-name" id="sidebar-name">Carregando...</span>
+          <span class="user-role-badge" id="sidebar-role">usuário</span>
+        </div>
+        <button type="button" class="btn-icon" title="Encerrar Sessão" onclick="handleLogout()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="main-content">
+      
+      <!-- CABEÇALHO SUPERIOR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" class="btn-icon mobile-only" onclick="toggleSidebar(true)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div>
+            <h1 id="topbar-title" class="topbar-heading">Dashboard</h1>
+            <span id="topbar-date" class="topbar-sub">Quinta-feira, 24 de Setembro</span>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openQuickAttendanceModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span>Chamada Rápida</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="navigate('attendance')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Fazer Chamada</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTEÚDO DAS SEÇÕES -->
+      <div class="content-body">
+
+        <!-- ================= SEÇÃO: DASHBOARD ================= -->
+        <section id="section-dashboard" class="content-section">
+          <!-- CARDS DE ESTATÍSTICAS -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon stat-icon-blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Total de Alunos</span>
+                <span class="stat-value" id="dash-students">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon stat-icon-purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Total de Cursos</span>
+                <span class="stat-value" id="dash-courses">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon stat-icon-emerald">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Presenças Registradas</span>
+                <span class="stat-value" id="dash-present">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon stat-icon-rose">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Ausências Registradas</span>
+                <span class="stat-value" id="dash-absent">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon stat-icon-amber">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-label">Taxa Geral de Presença</span>
+                <span class="stat-value" id="dash-rate">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- GRID PRINCIPAL DO DASHBOARD -->
+          <div class="dashboard-grid">
+            
+            <!-- REGISTROS RECENTES -->
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3 class="panel-title">Registros Recentes de Presença</h3>
+                  <p class="panel-subtitle">Últimas anotações efetuadas no sistema</p>
+                </div>
+                <button type="button" class="btn btn-outline btn-xs" onclick="navigate('history')">Ver Histórico Completo</button>
+              </div>
+              <div class="panel-body p-0">
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Aluno</th>
+                        <th>Curso</th>
+                        <th>Status</th>
+                        <th>Registrado Por</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dash-recent-records">
+                      <!-- Renderizado via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD DE AÇÃO RÁPIDA & TAXAS POR CURSO -->
+            <div class="dashboard-sidebar-column">
+              <!-- AÇÃO RÁPIDA -->
+              <div class="panel quick-action-panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Ação Rápida de Presença</h3>
+                </div>
+                <div class="panel-body">
+                  <p class="text-sm text-slate-600 mb-4">Lance a presença de um aluno imediatamente sem sair do dashboard.</p>
+                  <form id="dash-quick-form" onsubmit="handleDashboardQuickAttendance(event)">
+                    <div class="form-group">
+                      <label for="dash-quick-student">Aluno</label>
+                      <select id="dash-quick-student" required class="form-select">
+                        <option value="">Selecione o aluno...</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dash-quick-course">Curso</label>
+                      <select id="dash-quick-course" required class="form-select">
+                        <option value="">Selecione o curso...</option>
+                      </select>
+                    </div>
+
+                    <div class="form-row">
+                      <div class="form-group flex-1">
+                        <label for="dash-quick-date">Data</label>
+                        <input type="date" id="dash-quick-date" required class="form-input">
+                      </div>
+
+                      <div class="form-group flex-1">
+                        <label for="dash-quick-status">Status</label>
+                        <select id="dash-quick-status" required class="form-select">
+                          <option value="present">Presente</option>
+                          <option value="absent">Ausente</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="dash-quick-notes">Observação (opcional)</label>
+                      <input type="text" id="dash-quick-notes" placeholder="Ex: Chegou com 10 min de atraso" class="form-input">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full mt-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span>Registrar Presença Agora</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- RESUMO POR CURSO -->
+              <div class="panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Frequência por Curso</h3>
+                </div>
+                <div class="panel-body" id="dash-course-bars">
+                  <!-- Renderizado via JS -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: FAZER CHAMADA (TURMA / BATCH & INDIVIDUAL) ================= -->
+        <section id="section-attendance" class="content-section hidden">
+          <div class="section-header-banner">
+            <div>
+              <h2 class="section-title">Controle de Chamada</h2>
+              <p class="section-subtitle">Realize a chamada diária dos alunos por curso ou lance registros individuais.</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Selecione o Curso e a Data da Chamada</h3>
+            </div>
+            <div class="panel-body">
+              <div class="form-row items-end">
+                <div class="form-group flex-1">
+                  <label for="call-course-select">Curso</label>
+                  <select id="call-course-select" class="form-select" onchange="loadClassRollCall()">
+                    <option value="">Selecione um curso...</option>
+                  </select>
+                </div>
+
+                <div class="form-group flex-1">
+                  <label for="call-date-input">Data da Chamada (não permite datas futuras)</label>
+                  <input type="date" id="call-date-input" class="form-input" onchange="loadClassRollCall()">
+                </div>
+
+                <div class="form-group">
+                  <button type="button" class="btn btn-outline" onclick="loadClassRollCall()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                    <span>Carregar Turma</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LISTA DA TURMA PARA CHAMADA -->
+          <div class="panel mt-4" id="class-roll-container">
+            <div class="panel-header flex-between">
+              <div>
+                <h3 class="panel-title">Lista de Alunos da Turma</h3>
+                <span class="text-sm text-slate-500" id="roll-call-count-label">Selecione o curso e a data acima</span>
+              </div>
+              <div class="btn-group" id="roll-call-quick-buttons" style="display: none;">
+                <button type="button" class="btn btn-xs btn-outline-emerald" onclick="markAllStudents('present')">
+                  Todos Presentes
+                </button>
+                <button type="button" class="btn btn-xs btn-outline-rose" onclick="markAllStudents('absent')">
+                  Todos Ausentes
+                </button>
+              </div>
+            </div>
+            
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Aluno</th>
+                      <th>E-mail</th>
+                      <th>Idade</th>
+                      <th class="text-center">Status da Presença</th>
+                      <th>Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roll-call-table-body">
+                    <tr>
+                      <td colspan="6" class="table-empty-state">
+                        Por favor, selecione um curso e uma data para iniciar a chamada da turma.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel-footer flex-between" id="roll-call-footer" style="display: none;">
+              <span class="text-xs text-slate-500">Registros existentes na mesma data serão atualizados automaticamente com histórico de auditoria.</span>
+              <button type="button" class="btn btn-primary" onclick="submitClassRollCall()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Salvar Chamada da Turma</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: ALUNOS ================= -->
+        <section id="section-students" class="content-section hidden">
+          <div class="section-header-banner flex-between">
+            <div>
+              <h2 class="section-title">Gerenciamento de Alunos</h2>
+              <p class="section-subtitle">Cadastre, edite e acompanhe os alunos matriculados.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openStudentModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Novo Aluno</span>
+            </button>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header flex-between">
+              <div class="search-input-wrapper">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="students-search" placeholder="Buscar aluno por nome ou e-mail..." oninput="handleStudentSearch(this.value)">
+              </div>
+              <span class="text-sm text-slate-500" id="students-count-badge">0 alunos</span>
+            </div>
+
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>E-mail</th>
+                      <th>Idade</th>
+                      <th>Total Chamadas</th>
+                      <th>Presenças</th>
+                      <th>Ausências</th>
+                      <th>Frequência</th>
+                      <th class="text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="students-table-body">
+                    <!-- Renderizado via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: CURSOS ================= -->
+        <section id="section-courses" class="content-section hidden">
+          <div class="section-header-banner flex-between">
+            <div>
+              <h2 class="section-title">Gerenciamento de Cursos</h2>
+              <p class="section-subtitle">Disciplinas, turmas e carga horária acadêmica.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openCourseModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Novo Curso</span>
+            </button>
+          </div>
+
+          <div class="courses-grid" id="courses-cards-container">
+            <!-- Renderizado via JS -->
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: HISTÓRICO ================= -->
+        <section id="section-history" class="content-section hidden">
+          <div class="section-header-banner">
+            <div>
+              <h2 class="section-title">Histórico de Chamadas</h2>
+              <p class="section-subtitle">Chamadas agrupadas por curso e data com taxa de assiduidade e detalhes.</p>
+            </div>
+          </div>
+
+          <!-- FILTROS -->
+          <div class="panel mb-4">
+            <div class="panel-body">
+              <div class="filter-grid">
+                <div class="form-group">
+                  <label for="hist-course">Curso</label>
+                  <select id="hist-course" class="form-select" onchange="loadHistory(1)">
+                    <option value="">Todos os cursos</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="hist-start-date">Data Inicial</label>
+                  <input type="date" id="hist-start-date" class="form-input" onchange="loadHistory(1)">
+                </div>
+
+                <div class="form-group">
+                  <label for="hist-end-date">Data Final</label>
+                  <input type="date" id="hist-end-date" class="form-input" onchange="loadHistory(1)">
+                </div>
+
+                <div class="form-group">
+                  <label for="hist-status">Status</label>
+                  <select id="hist-status" class="form-select" onchange="loadHistory(1)">
+                    <option value="">Todos os status</option>
+                    <option value="present">Presente</option>
+                    <option value="absent">Ausente</option>
+                  </select>
+                </div>
+
+                <div class="form-group flex items-end">
+                  <button type="button" class="btn btn-outline w-full" onclick="resetHistoryFilters()">
+                    Limpar Filtros
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABELA DE HISTÓRICO -->
+          <div class="panel">
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Data da Sessão</th>
+                      <th>Curso</th>
+                      <th>Duração</th>
+                      <th>Total Alunos</th>
+                      <th>Presentes</th>
+                      <th>Ausentes</th>
+                      <th>Taxa de Assiduidade</th>
+                      <th class="text-right">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="history-table-body">
+                    <!-- Renderizado via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- PAGINAÇÃO -->
+            <div class="panel-footer flex-between">
+              <span class="text-sm text-slate-500" id="hist-pagination-info">Página 1 de 1</span>
+              <div class="pagination-controls" id="hist-pagination-buttons">
+                <!-- Botões de página -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: RELATÓRIOS ================= -->
+        <section id="section-reports" class="content-section hidden">
+          <div class="section-header-banner flex-between">
+            <div>
+              <h2 class="section-title">Relatórios e Exportação CSV</h2>
+              <p class="section-subtitle">Métricas acadêmicas globais e frequência individual detalhada de cada aluno.</p>
+            </div>
+            <button type="button" class="btn btn-emerald" onclick="exportAttendanceCSV()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Exportar Dados em CSV</span>
+            </button>
+          </div>
+
+          <!-- FILTROS DE RELATÓRIO -->
+          <div class="panel mb-4">
+            <div class="panel-body">
+              <div class="filter-grid">
+                <div class="form-group">
+                  <label for="rep-course">Curso</label>
+                  <select id="rep-course" class="form-select" onchange="loadReports()">
+                    <option value="">Todos os cursos</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="rep-start-date">Período Inicial</label>
+                  <input type="date" id="rep-start-date" class="form-input" onchange="loadReports()">
+                </div>
+
+                <div class="form-group">
+                  <label for="rep-end-date">Período Final</label>
+                  <input type="date" id="rep-end-date" class="form-input" onchange="loadReports()">
+                </div>
+
+                <div class="form-group">
+                  <label for="rep-status">Status</label>
+                  <select id="rep-status" class="form-select" onchange="loadReports()">
+                    <option value="">Todos</option>
+                    <option value="present">Presente</option>
+                    <option value="absent">Ausente</option>
+                  </select>
+                </div>
+
+                <div class="form-group flex items-end">
+                  <button type="button" class="btn btn-outline w-full" onclick="resetReportFilters()">
+                    Resetar Filtros
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABELA DE FREQUÊNCIA INDIVIDUAL DOS ALUNOS -->
+          <div class="panel">
+            <div class="panel-header flex-between">
+              <div>
+                <h3 class="panel-title">Frequência Individual dos Alunos</h3>
+                <p class="panel-subtitle">Total de chamadas, faltas e percentual com indicador de situação</p>
+              </div>
+              <span class="badge badge-neutral" id="rep-students-count">0 alunos</span>
+            </div>
+            
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Aluno</th>
+                      <th>E-mail</th>
+                      <th>Idade</th>
+                      <th>Total Sessões</th>
+                      <th>Presenças</th>
+                      <th>Ausências</th>
+                      <th>Percentual</th>
+                      <th>Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="report-students-body">
+                    <!-- Renderizado via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: USUÁRIOS (ADMIN ONLY) ================= -->
+        <section id="section-users" class="content-section admin-only hidden">
+          <div class="section-header-banner flex-between">
+            <div>
+              <h2 class="section-title">Gerenciamento de Usuários</h2>
+              <p class="section-subtitle">Controle de operadores, administradores, senhas e status de contas.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openUserModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Novo Usuário</span>
+            </button>
+          </div>
+
+          <div class="panel">
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome Completo</th>
+                      <th>Usuário</th>
+                      <th>Papel (Role)</th>
+                      <th>Status da Conta</th>
+                      <th>Criado Em</th>
+                      <th class="text-right">Ações Administrativas</th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-table-body">
+                    <!-- Renderizado via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: AUDITORIA (ADMIN ONLY) ================= -->
+        <section id="section-audit" class="content-section admin-only hidden">
+          <div class="section-header-banner">
+            <div>
+              <h2 class="section-title">Auditoria de Presenças</h2>
+              <p class="section-subtitle">Rastreabilidade completa: criação, alterações e exclusões com usuário e horários.</p>
+            </div>
+          </div>
+
+          <div class="panel mb-4">
+            <div class="panel-body">
+              <div class="filter-grid">
+                <div class="form-group">
+                  <label for="audit-action">Ação</label>
+                  <select id="audit-action" class="form-select" onchange="loadAudit(1)">
+                    <option value="">Todas as ações</option>
+                    <option value="CREATE">Criação (CREATE)</option>
+                    <option value="UPDATE">Alteração (UPDATE)</option>
+                    <option value="DELETE">Exclusão (DELETE)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="audit-start-date">A partir de</label>
+                  <input type="date" id="audit-start-date" class="form-input" onchange="loadAudit(1)">
+                </div>
+
+                <div class="form-group">
+                  <label for="audit-end-date">Até a data</label>
+                  <input type="date" id="audit-end-date" class="form-input" onchange="loadAudit(1)">
+                </div>
+
+                <div class="form-group flex items-end">
+                  <button type="button" class="btn btn-outline w-full" onclick="resetAuditFilters()">
+                    Limpar Filtros
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Data/Horário</th>
+                      <th>Ação</th>
+                      <th>Operador / Usuário</th>
+                      <th>Aluno</th>
+                      <th>Curso</th>
+                      <th>Data Presença</th>
+                      <th>Transição de Status</th>
+                      <th>Observação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-table-body">
+                    <!-- Renderizado via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel-footer flex-between">
+              <span class="text-sm text-slate-500" id="audit-pagination-info">Página 1</span>
+              <div class="pagination-controls" id="audit-pagination-buttons">
+                <!-- Botões de paginação -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SEÇÃO: PERFIL ================= -->
+        <section id="section-profile" class="content-section hidden">
+          <div class="section-header-banner">
+            <div>
+              <h2 class="section-title">Meu Perfil</h2>
+              <p class="section-subtitle">Visualização de credenciais e alteração segura de senha.</p>
+            </div>
+          </div>
+
+          <div class="profile-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Informações do Usuário</h3>
+              </div>
+              <div class="panel-body">
+                <div class="profile-info-list">
+                  <div class="info-row">
+                    <span class="info-label">Nome Completo:</span>
+                    <span class="info-value" id="profile-name">-</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Nome de Usuário:</span>
+                    <span class="info-value font-mono" id="profile-username">-</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Papel no Sistema:</span>
+                    <span class="info-value" id="profile-role">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Alteração de Senha</h3>
+              </div>
+              <div class="panel-body">
+                <form id="form-change-password" onsubmit="handleChangePassword(event)">
+                  <div class="form-group">
+                    <label for="curr-password">Senha Atual</label>
+                    <input type="password" id="curr-password" required placeholder="Digite sua senha atual" autocomplete="current-password">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="new-password">Nova Senha</label>
+                    <input type="password" id="new-password" required minlength="6" placeholder="Mínimo de 6 caracteres" autocomplete="new-password">
+                    <small class="field-help">A nova senha deve possuir ao menos 6 caracteres</small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="conf-password">Confirmação da Nova Senha</label>
+                    <input type="password" id="conf-password" required minlength="6" placeholder="Repita a nova senha" autocomplete="new-password">
+                  </div>
+
+                  <button type="submit" class="btn btn-primary mt-2">
+                    Atualizar Minha Senha
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= MODAIS ================= -->
+
+  <!-- MODAL: ALUNO (CRIAR / EDITAR) -->
+  <div id="modal-student" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-student-title">Cadastrar Novo Aluno</h3>
+        <button type="button" class="btn-icon" onclick="closeStudentModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-student" onsubmit="handleSaveStudent(event)">
+        <input type="hidden" id="student-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="student-name">Nome Completo</label>
+            <input type="text" id="student-name" required minlength="2" placeholder="ex: Ana Clara Souza">
+          </div>
+
+          <div class="form-group">
+            <label for="student-email">Endereço de E-mail</label>
+            <input type="email" id="student-email" required placeholder="ex: ana.souza@escola.com">
+            <small class="field-help">E-mails não podem ser duplicados</small>
+          </div>
+
+          <div class="form-group">
+            <label for="student-age">Idade (1 a 129 anos)</label>
+            <input type="number" id="student-age" required min="1" max="129" placeholder="ex: 16">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeStudentModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-student">Salvar Aluno</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CURSO (CRIAR / EDITAR) -->
+  <div id="modal-course" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-course-title">Cadastrar Novo Curso</h3>
+        <button type="button" class="btn-icon" onclick="closeCourseModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-course" onsubmit="handleSaveCourse(event)">
+        <input type="hidden" id="course-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="course-title">Título do Curso</label>
+            <input type="text" id="course-title" required minlength="2" placeholder="ex: Matemática Básica">
+          </div>
+
+          <div class="form-group">
+            <label for="course-duration">Carga Horária / Duração (horas)</label>
+            <input type="number" id="course-duration" required min="1" placeholder="ex: 80">
+            <small class="field-help">Deve ser um valor maior que zero</small>
+          </div>
+
+          <div class="form-group">
+            <label for="course-description">Descrição (opcional)</label>
+            <textarea id="course-description" rows="3" placeholder="Breve ementa ou descrição dos objetivos do curso..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeCourseModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-course">Salvar Curso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DETALHES DA SESSÃO DE CHAMADA -->
+  <div id="modal-history-details" class="modal-overlay hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-details-title">Detalhes da Chamada</h3>
+          <span class="text-sm text-slate-500" id="modal-details-subtitle">-</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeHistoryDetailsModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="stats-mini-row mb-4">
+          <div class="stat-mini">Total: <strong id="details-total">0</strong></div>
+          <div class="stat-mini text-emerald-700">Presentes: <strong id="details-present">0</strong></div>
+          <div class="stat-mini text-rose-700">Ausentes: <strong id="details-absent">0</strong></div>
+          <div class="stat-mini text-indigo-700">Frequência: <strong id="details-rate">0%</strong></div>
+        </div>
+
+        <div class="table-responsive max-h-96">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Aluno</th>
+                <th>Status</th>
+                <th>Observações</th>
+                <th>Registrado Por</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody id="modal-details-body">
+              <!-- Renderizado via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeHistoryDetailsModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: USUÁRIO ADMINISTRATIVO (CRIAR / EDITAR) -->
+  <div id="modal-user" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-user-title">Novo Usuário do Sistema</h3>
+        <button type="button" class="btn-icon" onclick="closeUserModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-user" onsubmit="handleSaveUser(event)">
+        <input type="hidden" id="manage-user-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="user-fullname">Nome Completo</label>
+            <input type="text" id="user-fullname" required minlength="2" placeholder="ex: João Pereira">
+          </div>
+
+          <div class="form-group">
+            <label for="user-login">Nome de Usuário</label>
+            <input type="text" id="user-login" required minlength="3" placeholder="ex: joaopereira">
+          </div>
+
+          <div class="form-group" id="group-user-password">
+            <label for="user-pass">Senha Inicial</label>
+            <input type="password" id="user-pass" minlength="6" placeholder="Mínimo 6 caracteres">
+            <small class="field-help">Deve possuir ao menos 6 caracteres</small>
+          </div>
+
+          <div class="form-group">
+            <label for="user-role-select">Papel / Perfil</label>
+            <select id="user-role-select" class="form-select">
+              <option value="user">Usuário Padrão (Operador / Professor)</option>
+              <option value="admin">Administrador (Acesso Total)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeUserModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Usuário</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REDEFINIR SENHA DE USUÁRIO -->
+  <div id="modal-reset-password" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Redefinir Senha de Usuário</h3>
+        <button type="button" class="btn-icon" onclick="closeResetPasswordModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-reset-password" onsubmit="handleResetPassword(event)">
+        <input type="hidden" id="reset-target-user-id">
+        <div class="modal-body">
+          <p class="text-sm text-slate-600 mb-4">
+            Defina uma nova senha de acesso para o usuário <strong id="reset-target-username"></strong>.
+          </p>
+
+          <div class="form-group">
+            <label for="reset-new-password">Nova Senha Provisória</label>
+            <input type="password" id="reset-new-password" required minlength="6" placeholder="Mínimo 6 caracteres">
+            <small class="field-help">Mínimo 6 caracteres</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeResetPasswordModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Redefinir Senha</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRMAÇÃO DE EXCLUSÃO -->
+  <div id="modal-confirm" class="modal-overlay hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="confirm-title" class="text-rose-600">Confirmar Exclusão</h3>
+        <button type="button" class="btn-icon" onclick="closeConfirmModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="text-sm text-slate-600">
+          Você tem certeza de que deseja realizar esta operação? Esta ação não pode ser desfeita.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeConfirmModal()">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-action">Sim, Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Gerenciador de Presença de Alunos",
+  "description": "Sistema completo de controle e gestão de presença de alunos com autenticação, relatórios, auditoria e exportação CSV.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
